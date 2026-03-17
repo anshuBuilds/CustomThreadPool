@@ -1,36 +1,30 @@
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 public class SimpleExecutor {
     private Thread worker;
-    private final Queue<Runnable> queue = new LinkedList<>();
+    private BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(10);
 
     SimpleExecutor() {
         worker = new Thread(()->{
             while(true){
-                Runnable task;
-
-                synchronized (queue) {
-                    while (queue.isEmpty()) {
-                        try {
-                            queue.wait();
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    task = queue.poll();
+                Runnable task = queue.poll();
+                if(task != null){
+                    task.run();
                 }
-                task.run();
             }
         });
         worker.start();
     }
 
     public void submit(Runnable task) {
-        synchronized (queue) {
-            queue.offer(task);
-            queue.notify();
+        try {
+            queue.put(task);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
+
     }
 }
