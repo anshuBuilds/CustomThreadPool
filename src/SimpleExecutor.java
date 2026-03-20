@@ -6,21 +6,23 @@ public class SimpleExecutor {
     private final Thread[] workers;
     volatile boolean isShutdown = false;
 
+    public static final Runnable POISON = () -> {};
+
     SimpleExecutor() {
 
         workers = new Thread[4];
         for (int i = 0; i < workers.length; i++) {
 
             workers[i] = new Thread(()->{
-                while(!Thread.currentThread().isInterrupted()) {
+                while(true) {
                     try {
                         Runnable task = queue.take();
+
+                        if(task == POISON) break;
+
                         task.run();
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        if(isShutdown && queue.isEmpty()) {
-                            break;
-                        }
                     }
                 }
             });
@@ -44,8 +46,12 @@ public class SimpleExecutor {
     public void shutdown() {
         isShutdown = true;
 
-        for(Thread worker : workers) {
-            worker.interrupt();
+        for(int i = 0; i < workers.length; i++) {
+            try {
+                queue.put(POISON);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }
