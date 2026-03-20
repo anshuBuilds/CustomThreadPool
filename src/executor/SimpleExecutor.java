@@ -1,3 +1,5 @@
+package executor;
+
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -12,20 +14,7 @@ public class SimpleExecutor {
 
         workers = new Thread[4];
         for (int i = 0; i < workers.length; i++) {
-
-            workers[i] = new Thread(()->{
-                while(true) {
-                    try {
-                        Runnable task = queue.take();
-
-                        if(task == POISON) break;
-
-                        task.run();
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-            });
+            workers[i] = new Thread(new Worker(queue, POISON));
             workers[i].start();
         }
     }
